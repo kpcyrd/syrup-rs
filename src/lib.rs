@@ -90,7 +90,7 @@ impl Window {
                 self.position = 0;
                 return Some(line);
             },
-            Some(Input::Character('\x7f')) => {
+            Some(Input::Character('\x7f')) | Some(Input::Character('\x08')) => {
                 if self.position > 0 {
                     self.win.mv(self.max_y -1, self.position-1);
                     self.win.delch();
