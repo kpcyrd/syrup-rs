@@ -1,7 +1,9 @@
-# syrup-rs [![Build Status][travis-img]][travis] [![crates.io][crates-img]][crates] [![docs.rs][docs-img]][docs]
+# syrup-rs [![Build Status][travis-img]][travis] [![Build status][appveyor-img]][appveyor] [![crates.io][crates-img]][crates] [![docs.rs][docs-img]][docs]
 
 [travis-img]:   https://travis-ci.org/kpcyrd/syrup-rs.svg?branch=master
 [travis]:       https://travis-ci.org/kpcyrd/syrup-rs
+[appveyor-img]: https://ci.appveyor.com/api/projects/status/9ro98ex64g2d54vn/branch/master?svg=true
+[appveyor]:     https://ci.appveyor.com/project/kpcyrd/syrup-rs/branch/master
 [crates-img]:   https://img.shields.io/crates/v/syrup.svg
 [crates]:       https://crates.io/crates/syrup
 [docs-img]:     https://docs.rs/syrup/badge.svg
