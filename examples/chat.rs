@@ -4,6 +4,7 @@ use syrup::Window;
 
 use std::thread;
 use std::sync::mpsc;
+use std::time::Duration;
 
 
 fn main() {
@@ -16,7 +17,7 @@ fn main() {
     thread::spawn(move || {
         loop {
             tx.send(String::from("ohai")).unwrap();
-            thread::sleep(std::time::Duration::from_secs(3));
+            thread::sleep(Duration::from_secs(3));
         }
     });
 
