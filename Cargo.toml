@@ -12,4 +12,4 @@ readme = "README.md"
 travis-ci = { repository = "kpcyrd/syrup-rs" }
 
 [dependencies]
-pancurses = "0.15.0"
+pancurses = "0.16.0"

@@ -17,6 +17,7 @@ pub struct Window {
     position: i32,
     max_y: i32,
     max_x: i32,
+    prompt: String,
 }
 
 impl Window {
@@ -41,6 +42,7 @@ impl Window {
             position: 0,
             max_y,
             max_x,
+            prompt: String::new(),
         }
     }
 
@@ -74,10 +76,11 @@ impl Window {
         self.win.attrset(Attribute::Normal);
 
         self.win.mv(self.max_y -1, 0);
+        self.win.addstr(&self.prompt);
         for x in &self.input {
             self.win.addch(*x);
         }
-        self.win.mv(self.max_y -1, self.position);
+        self.win.mv(self.max_y -1, self.cursor_pos());
     }
 
     pub fn resize(&mut self) {
@@ -88,6 +91,10 @@ impl Window {
             self.backlog.remove(0);
         }
         self.redraw();
+    }
+
+    fn cursor_pos(&self) -> i32 {
+        self.position + (self.prompt.len() as i32)
     }
 
     pub fn get(&mut self) -> Option<String> {
@@ -103,7 +110,7 @@ impl Window {
             },
             Some(Input::Character('\x7f')) | Some(Input::Character('\x08')) => {
                 if self.position > 0 {
-                    self.win.mv(self.max_y -1, self.position-1);
+                    self.win.mv(self.max_y -1, self.cursor_pos()-1);
                     self.win.delch();
                     self.position -= 1;
                     self.input.remove(self.position as usize);
@@ -122,11 +129,11 @@ impl Window {
             },
             Some(Input::KeyLeft) => {
                 self.position = max(0, self.position -1);
-                self.win.mv(self.max_y -1, self.position);
+                self.win.mv(self.max_y -1, self.cursor_pos());
             },
             Some(Input::KeyRight) => {
                 self.position = min(self.input.len() as i32, self.position +1);
-                self.win.mv(self.max_y -1, self.position);
+                self.win.mv(self.max_y -1, self.cursor_pos());
             },
             Some(Input::KeyResize) => self.resize(),
             Some(_input) => {
@@ -142,6 +149,10 @@ impl Window {
         self.win.refresh();
 
         None
+    }
+
+    pub fn set_prompt<I: Into<String>>(&mut self, prompt: I) {
+        self.prompt = prompt.into();
     }
 }
 
