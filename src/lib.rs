@@ -14,7 +14,7 @@ pub struct Window {
     win: pancurses::Window,
     backlog: Vec<String>,
     input: Vec<char>,
-    position: i32,
+    position: usize,
     max_y: i32,
     max_x: i32,
     prompt: String,
@@ -97,7 +97,7 @@ impl Window {
     }
 
     fn cursor_pos(&self) -> i32 {
-        self.position + (self.prompt.len() as i32)
+        (self.position + self.prompt.len()) as i32
     }
 
     pub fn get(&mut self) -> Option<String> {
@@ -105,7 +105,7 @@ impl Window {
             Some(c) if self.catch_key => {
                 let x = format!("{:?}", c);
                 self.input.extend(x.chars());
-                self.position += x.len() as i32;
+                self.position += x.len();
                 self.catch_key = false;
                 self.redraw();
             },
@@ -125,7 +125,7 @@ impl Window {
                     self.win.mv(self.max_y -1, self.cursor_pos()-1);
                     self.win.delch();
                     self.position -= 1;
-                    self.input.remove(self.position as usize);
+                    self.input.remove(self.position);
                 }
             },
             // ^K
@@ -139,20 +139,20 @@ impl Window {
             },
             // ^E
             Some(Input::Character('\x05')) => {
-                self.position = self.input.len() as i32;
+                self.position = self.input.len();
                 self.redraw();
             },
             // ^U
             Some(Input::Character('\x15')) => {
-                self.input.drain(..(self.position as usize)).for_each(drop);
+                self.input.drain(..self.position).for_each(drop);
                 self.position = 0;
                 self.redraw();
             },
             // Delete
             Some(Input::KeyDC) => {
-                if self.position < self.input.len() as i32 {
+                if self.position < self.input.len() {
                     self.win.delch();
-                    self.input.remove(self.position as usize);
+                    self.input.remove(self.position);
                 }
             },
             Some(Input::Character(c)) => {
@@ -165,7 +165,7 @@ impl Window {
                 self.win.mv(self.max_y -1, self.cursor_pos());
             },
             Some(Input::KeyRight) => {
-                self.position = min(self.input.len() as i32, self.position +1);
+                self.position = min(self.input.len(), self.position +1);
                 self.win.mv(self.max_y -1, self.cursor_pos());
             },
             Some(Input::KeyResize) => self.resize(),
