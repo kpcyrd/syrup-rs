@@ -109,6 +109,7 @@ impl Window {
                 self.catch_key = false;
                 self.redraw();
             },
+            // Enter
             Some(Input::Character('\n')) => {
                 if self.input.len() == 0 {
                     return None;
@@ -118,6 +119,7 @@ impl Window {
                 self.position = 0;
                 return Some(line);
             },
+            // Backspace
             Some(Input::Character('\x7f')) | Some(Input::Character('\x08')) => {
                 if self.position > 0 {
                     self.win.mv(self.max_y -1, self.cursor_pos()-1);
@@ -126,9 +128,27 @@ impl Window {
                     self.input.remove(self.position as usize);
                 }
             },
+            // ^K
             Some(Input::Character('\x0b')) => {
                 self.catch_key = true;
             },
+            // ^A
+            Some(Input::Character('\x01')) => {
+                self.position = 0;
+                self.redraw();
+            },
+            // ^E
+            Some(Input::Character('\x05')) => {
+                self.position = self.input.len() as i32;
+                self.redraw();
+            },
+            // ^U
+            Some(Input::Character('\x15')) => {
+                self.input.drain(..(self.position as usize)).for_each(drop);
+                self.position = 0;
+                self.redraw();
+            },
+            // Delete
             Some(Input::KeyDC) => {
                 if self.position < self.input.len() as i32 {
                     self.win.delch();
