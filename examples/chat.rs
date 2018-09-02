@@ -9,6 +9,9 @@ use std::time::Duration;
 
 fn main() {
     let mut window = Window::initscr();
+
+    window.set_prompt("[user] ");
+
     window.writeln("");
     window.writeln(" === welcome to example chat");
     window.writeln("");

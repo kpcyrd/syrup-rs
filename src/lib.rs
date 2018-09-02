@@ -1,6 +1,7 @@
 extern crate pancurses;
 
-use pancurses::{initscr, endwin, Input, noecho};
+use pancurses::{initscr, endwin, Input, Attribute};
+use pancurses::{COLOR_PAIR, COLOR_WHITE, COLOR_BLUE};
 use std::cmp::{max, min};
 use std::ops::Deref;
 use std::fmt::Display;
@@ -13,9 +14,12 @@ pub struct Window {
     win: pancurses::Window,
     backlog: Vec<String>,
     input: Vec<char>,
-    position: i32,
+    position: usize,
     max_y: i32,
     max_x: i32,
+    prompt: String,
+    /// catch the next key and add a debug representation to input
+    catch_key: bool,
 }
 
 impl Window {
@@ -23,7 +27,13 @@ impl Window {
         let win = initscr();
         win.timeout(100);
         win.keypad(true);
-        noecho();
+
+        pancurses::start_color();
+        pancurses::use_default_colors();
+
+        pancurses::init_pair(1, COLOR_WHITE, COLOR_BLUE);
+
+        pancurses::noecho();
 
         let (max_y, max_x) = win.get_max_yx();
 
@@ -34,6 +44,8 @@ impl Window {
             position: 0,
             max_y,
             max_x,
+            prompt: String::new(),
+            catch_key: false,
         }
     }
 
@@ -61,12 +73,17 @@ impl Window {
 
     pub fn draw_input(&self) {
         self.win.mv(self.max_y -2, 0);
-        self.win.hline('-', self.max_x);
+
+        self.win.attrset(COLOR_PAIR(1));
+        self.win.hline(' ', self.max_x);
+        self.win.attrset(Attribute::Normal);
+
         self.win.mv(self.max_y -1, 0);
+        self.win.addstr(&self.prompt);
         for x in &self.input {
             self.win.addch(*x);
         }
-        self.win.mv(self.max_y -1, self.position);
+        self.win.mv(self.max_y -1, self.cursor_pos());
     }
 
     pub fn resize(&mut self) {
@@ -79,8 +96,20 @@ impl Window {
         self.redraw();
     }
 
+    fn cursor_pos(&self) -> i32 {
+        (self.position + self.prompt.len()) as i32
+    }
+
     pub fn get(&mut self) -> Option<String> {
         match self.win.getch() {
+            Some(c) if self.catch_key => {
+                let x = format!("{:?}", c);
+                self.input.extend(x.chars());
+                self.position += x.len();
+                self.catch_key = false;
+                self.redraw();
+            },
+            // Enter
             Some(Input::Character('\n')) => {
                 if self.input.len() == 0 {
                     return None;
@@ -90,18 +119,44 @@ impl Window {
                 self.position = 0;
                 return Some(line);
             },
+            // Backspace
             Some(Input::Character('\x7f')) | Some(Input::Character('\x08')) => {
                 if self.position > 0 {
-                    self.win.mv(self.max_y -1, self.position-1);
+                    self.win.mv(self.max_y -1, self.cursor_pos()-1);
                     self.win.delch();
                     self.position -= 1;
-                    self.input.remove(self.position as usize);
+                    self.input.remove(self.position);
                 }
             },
+            // ^K
+            Some(Input::Character('\x0b')) => {
+                self.catch_key = true;
+            },
+            // ^L
+            Some(Input::Character('\x0c')) => {
+                self.redraw();
+            },
+            // ^A
+            Some(Input::Character('\x01')) => {
+                self.position = 0;
+                self.redraw();
+            },
+            // ^E
+            Some(Input::Character('\x05')) => {
+                self.position = self.input.len();
+                self.redraw();
+            },
+            // ^U
+            Some(Input::Character('\x15')) => {
+                self.input.drain(..self.position).for_each(drop);
+                self.position = 0;
+                self.redraw();
+            },
+            // Delete
             Some(Input::KeyDC) => {
-                if self.position < self.input.len() as i32 {
+                if self.position < self.input.len() {
                     self.win.delch();
-                    self.input.remove(self.position as usize);
+                    self.input.remove(self.position);
                 }
             },
             Some(Input::Character(c)) => {
@@ -111,11 +166,11 @@ impl Window {
             },
             Some(Input::KeyLeft) => {
                 self.position = max(0, self.position -1);
-                self.win.mv(self.max_y -1, self.position);
+                self.win.mv(self.max_y -1, self.cursor_pos());
             },
             Some(Input::KeyRight) => {
-                self.position = min(self.input.len() as i32, self.position +1);
-                self.win.mv(self.max_y -1, self.position);
+                self.position = min(self.input.len(), self.position +1);
+                self.win.mv(self.max_y -1, self.cursor_pos());
             },
             Some(Input::KeyResize) => self.resize(),
             Some(_input) => {
@@ -123,7 +178,7 @@ impl Window {
                 // TODO: KeyNPage
                 // TODO: KeyUp
                 // TODO: KeyDown
-                // self.win.addstr(&format!("<{:?}>", input));
+                // self.win.addstr(&format!("<{:?}>", _input));
             },
             None => (),
         }
@@ -131,6 +186,10 @@ impl Window {
         self.win.refresh();
 
         None
+    }
+
+    pub fn set_prompt<I: Into<String>>(&mut self, prompt: I) {
+        self.prompt = prompt.into();
     }
 }
 
