@@ -1,6 +1,7 @@
 extern crate pancurses;
 
-use pancurses::{initscr, endwin, Input, noecho};
+use pancurses::{initscr, endwin, Input, Attribute};
+use pancurses::{COLOR_PAIR, COLOR_WHITE, COLOR_BLUE};
 use std::cmp::{max, min};
 use std::ops::Deref;
 use std::fmt::Display;
@@ -23,7 +24,13 @@ impl Window {
         let win = initscr();
         win.timeout(100);
         win.keypad(true);
-        noecho();
+
+        pancurses::start_color();
+        pancurses::use_default_colors();
+
+        pancurses::init_pair(1, COLOR_WHITE, COLOR_BLUE);
+
+        pancurses::noecho();
 
         let (max_y, max_x) = win.get_max_yx();
 
@@ -61,7 +68,11 @@ impl Window {
 
     pub fn draw_input(&self) {
         self.win.mv(self.max_y -2, 0);
-        self.win.hline('-', self.max_x);
+
+        self.win.attrset(COLOR_PAIR(1));
+        self.win.hline(' ', self.max_x);
+        self.win.attrset(Attribute::Normal);
+
         self.win.mv(self.max_y -1, 0);
         for x in &self.input {
             self.win.addch(*x);
