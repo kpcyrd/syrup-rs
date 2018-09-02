@@ -132,6 +132,10 @@ impl Window {
             Some(Input::Character('\x0b')) => {
                 self.catch_key = true;
             },
+            // ^L
+            Some(Input::Character('\x0c')) => {
+                self.redraw();
+            },
             // ^A
             Some(Input::Character('\x01')) => {
                 self.position = 0;
