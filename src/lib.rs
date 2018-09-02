@@ -18,6 +18,8 @@ pub struct Window {
     max_y: i32,
     max_x: i32,
     prompt: String,
+    /// catch the next key and add a debug representation to input
+    catch_key: bool,
 }
 
 impl Window {
@@ -43,6 +45,7 @@ impl Window {
             max_y,
             max_x,
             prompt: String::new(),
+            catch_key: false,
         }
     }
 
@@ -99,6 +102,13 @@ impl Window {
 
     pub fn get(&mut self) -> Option<String> {
         match self.win.getch() {
+            Some(c) if self.catch_key => {
+                let x = format!("{:?}", c);
+                self.input.extend(x.chars());
+                self.position += x.len() as i32;
+                self.catch_key = false;
+                self.redraw();
+            },
             Some(Input::Character('\n')) => {
                 if self.input.len() == 0 {
                     return None;
@@ -115,6 +125,9 @@ impl Window {
                     self.position -= 1;
                     self.input.remove(self.position as usize);
                 }
+            },
+            Some(Input::Character('\x0b')) => {
+                self.catch_key = true;
             },
             Some(Input::KeyDC) => {
                 if self.position < self.input.len() as i32 {
@@ -141,7 +154,7 @@ impl Window {
                 // TODO: KeyNPage
                 // TODO: KeyUp
                 // TODO: KeyDown
-                // self.win.addstr(&format!("<{:?}>", input));
+                // self.win.addstr(&format!("<{:?}>", _input));
             },
             None => (),
         }
