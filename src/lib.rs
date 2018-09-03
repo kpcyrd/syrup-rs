@@ -76,11 +76,13 @@ impl Window {
     }
 
     pub fn draw_topic(&self) {
-        let topic = &self.topic[..min(self.topic.len(), self.max_x as usize)];
+        // this is needed to handle some utf8 edgecases 🤷
+        let topic = self.topic.chars().take(self.max_x as usize).collect::<String>();
+        let topic_len = self.topic.chars().count() as i32;
 
         self.win.attrset(COLOR_PAIR(1));
         self.win.printw(topic);
-        self.win.hline(' ', self.max_x - self.topic.len() as i32);
+        self.win.hline(' ', self.max_x - topic_len);
         self.win.attrset(Attribute::Normal);
         self.win.mv(1, 0);
     }
