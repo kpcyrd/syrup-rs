@@ -2,12 +2,13 @@ extern crate pancurses;
 
 use pancurses::{initscr, endwin, Input, Attribute};
 use pancurses::{COLOR_PAIR, COLOR_WHITE, COLOR_BLUE};
+use std::borrow::Cow;
 use std::cmp::{max, min};
 use std::ops::Deref;
 use std::fmt::Display;
 
 pub type Message = String;
-const INPUT_HEIGHT: usize = 2; // the number of lines we need for the input area
+const INPUT_HEIGHT: usize = 3; // the number of lines we need for the ui (input area and topic)
 
 
 pub struct Window {
@@ -17,7 +18,8 @@ pub struct Window {
     position: usize,
     max_y: i32,
     max_x: i32,
-    prompt: String,
+    prompt: Cow<'static, str>,
+    topic: Cow<'static, str>,
     /// catch the next key and add a debug representation to input
     catch_key: bool,
 }
@@ -44,7 +46,8 @@ impl Window {
             position: 0,
             max_y,
             max_x,
-            prompt: String::new(),
+            prompt: "".into(),
+            topic: "".into(),
             catch_key: false,
         }
     }
@@ -62,6 +65,7 @@ impl Window {
 
     pub fn redraw(&self) {
         self.win.erase();
+        self.draw_topic();
 
         for line in &self.backlog {
             self.win.printw(&line);
@@ -69,6 +73,16 @@ impl Window {
 
         self.draw_input();
         self.win.refresh();
+    }
+
+    pub fn draw_topic(&self) {
+        let topic = &self.topic[..min(self.topic.len(), self.max_x as usize)];
+
+        self.win.attrset(COLOR_PAIR(1));
+        self.win.printw(topic);
+        self.win.hline(' ', self.max_x - self.topic.len() as i32);
+        self.win.attrset(Attribute::Normal);
+        self.win.mv(1, 0);
     }
 
     pub fn draw_input(&self) {
@@ -188,8 +202,12 @@ impl Window {
         None
     }
 
-    pub fn set_prompt<I: Into<String>>(&mut self, prompt: I) {
+    pub fn set_prompt<I: Into<Cow<'static, str>>>(&mut self, prompt: I) {
         self.prompt = prompt.into();
+    }
+
+    pub fn set_topic<I: Into<Cow<'static, str>>>(&mut self, topic: I) {
+        self.topic = topic.into();
     }
 }
 
