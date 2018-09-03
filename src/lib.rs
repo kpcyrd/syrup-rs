@@ -8,7 +8,7 @@ use std::ops::Deref;
 use std::fmt::Display;
 
 pub type Message = String;
-const INPUT_HEIGHT: usize = 3; // the number of lines we need for the ui (input area and topic)
+const CHROME_HEIGHT: usize = 3; // the number of lines we need for the ui (input area and topic)
 
 
 pub struct Window {
@@ -40,7 +40,7 @@ impl Window {
         let (max_y, max_x) = win.get_max_yx();
 
         Window {
-            win: win,
+            win,
             backlog: Vec::new(),
             input: Vec::new(),
             position: 0,
@@ -56,7 +56,7 @@ impl Window {
         let line = format!("{}\n", txt);
         self.backlog.push(line);
 
-        if self.backlog.len() + INPUT_HEIGHT > self.max_y as usize {
+        if self.backlog.len() + CHROME_HEIGHT > self.max_y as usize {
             self.backlog.remove(0);
         }
 
@@ -104,7 +104,7 @@ impl Window {
         let (max_y, max_x) = self.win.get_max_yx();
         self.max_y = max_y;
         self.max_x = max_x;
-        while self.backlog.len() + INPUT_HEIGHT > self.max_y as usize {
+        while self.backlog.len() + CHROME_HEIGHT > self.max_y as usize {
             self.backlog.remove(0);
         }
         self.redraw();
@@ -125,7 +125,7 @@ impl Window {
             },
             // Enter
             Some(Input::Character('\n')) => {
-                if self.input.len() == 0 {
+                if self.input.is_empty() {
                     return None;
                 }
 
