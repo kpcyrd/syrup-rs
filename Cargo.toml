@@ -13,3 +13,4 @@ travis-ci = { repository = "kpcyrd/syrup-rs" }
 
 [dependencies]
 pancurses = "0.16.0"
+textwrap = { version="0.10", default-features=false }

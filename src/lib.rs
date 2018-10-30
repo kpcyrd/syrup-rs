@@ -1,4 +1,5 @@
 extern crate pancurses;
+extern crate textwrap;
 
 use pancurses::{initscr, endwin, Input, Attribute};
 use pancurses::{COLOR_PAIR, COLOR_WHITE, COLOR_BLUE};
@@ -6,6 +7,7 @@ use std::borrow::Cow;
 use std::cmp::{max, min};
 use std::ops::Deref;
 use std::fmt::Display;
+use textwrap::Wrapper;
 
 pub type Message = String;
 const CHROME_HEIGHT: usize = 3; // the number of lines we need for the ui (input area and topic)
@@ -53,13 +55,7 @@ impl Window {
     }
 
     pub fn writeln<D: Display>(&mut self, txt: D) {
-        let line = format!("{}\n", txt);
-        self.backlog.push(line);
-
-        if self.backlog.len() + CHROME_HEIGHT > self.max_y as usize {
-            self.backlog.remove(0);
-        }
-
+        self.backlog.push(txt.to_string());
         self.redraw();
     }
 
@@ -67,7 +63,33 @@ impl Window {
         self.win.erase();
         self.draw_topic();
 
-        for line in &self.backlog {
+        let max_lines = self.max_y as usize - CHROME_HEIGHT;
+        let mut backlog = Vec::new();
+
+        // leave some space for edgecases
+        let wrapper = Wrapper::new((self.max_x - 3) as usize)
+                        .subsequent_indent("| ");
+
+        // fill the screen bottom to top
+        for line in self.backlog.iter().rev() {
+            // we have to insert the last line first since we are writing bottom to top
+            for l in wrapper.wrap(line).iter().rev() {
+                backlog.push(format!("{}\n", l));
+            }
+
+            // if the screen is full, break early
+            if backlog.len() >= max_lines {
+                break;
+            }
+        }
+
+        // remove excess lines before printing the screen
+        while backlog.len() > max_lines {
+            backlog.pop();
+        }
+
+        // process the backlog in reverse order to write from top to bottom
+        for line in backlog.iter().rev() {
             self.win.printw(&line);
         }
 
