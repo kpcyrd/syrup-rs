@@ -90,7 +90,7 @@ impl Window {
 
         // process the backlog in reverse order to write from top to bottom
         for line in backlog.iter().rev() {
-            self.win.printw(&line);
+            self.win.addstr(&line);
         }
 
         self.draw_input();
@@ -103,7 +103,7 @@ impl Window {
         let topic_len = self.topic.chars().count() as i32;
 
         self.win.attrset(COLOR_PAIR(1));
-        self.win.printw(topic);
+        self.win.addstr(topic);
         self.win.hline(' ', self.max_x - topic_len);
         self.win.attrset(Attribute::Normal);
         self.win.mv(1, 0);

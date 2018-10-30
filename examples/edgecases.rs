@@ -23,10 +23,10 @@ fn main() {
     thread::spawn(move || {
         let emojis = "🤷".repeat(300);
         let tabs = "\t".repeat(30);
+        let format = "%p.%p.%p";
 
         loop {
-            // include format strings after this was fixed in pancurses
-            for x in &[IPSUM, &emojis, &tabs] {
+            for x in &[IPSUM, &format, &emojis, &tabs] {
                 tx.send(x.to_string()).unwrap();
                 thread::sleep(Duration::from_secs(3));
             }
