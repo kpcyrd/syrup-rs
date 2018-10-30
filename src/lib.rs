@@ -128,9 +128,6 @@ impl Window {
         let (max_y, max_x) = self.win.get_max_yx();
         self.max_y = max_y;
         self.max_x = max_x;
-        while self.backlog.len() + CHROME_HEIGHT > self.max_y as usize {
-            self.backlog.remove(0);
-        }
         self.redraw();
     }
 
