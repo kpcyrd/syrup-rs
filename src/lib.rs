@@ -4,7 +4,7 @@ extern crate textwrap;
 use pancurses::{initscr, endwin, Input, Attribute};
 use pancurses::{COLOR_PAIR, COLOR_WHITE, COLOR_BLUE};
 use std::borrow::Cow;
-use std::cmp::{max, min};
+use std::cmp::min;
 use std::ops::Deref;
 use std::fmt::Display;
 use textwrap::Wrapper;
@@ -22,7 +22,7 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    fn new() -> Buffer {
+    pub fn new() -> Buffer {
         Buffer {
             backlog: Vec::new(),
             input: Vec::new(),
@@ -30,6 +30,86 @@ impl Buffer {
             prompt: "".into(),
             topic: "".into(),
         }
+    }
+
+    fn cursor_pos(&self) -> i32 {
+        (self.position + self.prompt.len()) as i32
+    }
+
+    pub fn get(&mut self, win: &mut pancurses::Window, key: Input, max_y: i32) -> (bool, Option<String>) {
+        match key {
+            // Enter
+            Input::Character('\n') => {
+                if self.input.is_empty() {
+                    return (false, None);
+                }
+
+                let line = self.input.drain(..).collect();
+                self.position = 0;
+                return (false, Some(line));
+            },
+            // Backspace
+            Input::Character('\x7f') | Input::Character('\x08') => {
+                if self.position > 0 {
+                    win.mv(max_y -1, self.cursor_pos()-1);
+                    win.delch();
+                    self.position -= 1;
+                    self.input.remove(self.position);
+                }
+            },
+            // Delete
+            Input::KeyDC => {
+                if self.position < self.input.len() {
+                    win.delch();
+                    self.input.remove(self.position);
+                }
+            },
+            // ^A
+            Input::Character('\x01') => {
+                self.position = 0;
+                // redraw
+                return (true, None);
+            },
+            // ^E
+            Input::Character('\x05') => {
+                self.position = self.input.len();
+                // redraw
+                return (true, None);
+            },
+            // ^U
+            Input::Character('\x15') => {
+                self.input.drain(..self.position).for_each(drop);
+                self.position = 0;
+                // redraw
+                return (true, None);
+            },
+            Input::Character(c) => {
+                win.addch(c);
+                self.position += 1;
+                self.input.push(c);
+            },
+            Input::KeyLeft => {
+                if self.position > 0 {
+                    self.position -= 1;
+                    win.mv(max_y -1, self.cursor_pos());
+                }
+            },
+            Input::KeyRight => {
+                self.position = min(self.input.len(), self.position +1);
+                win.mv(max_y -1, self.cursor_pos());
+            },
+            _input => {
+                // TODO: KeyPPage
+                // TODO: KeyNPage
+                // TODO: KeyUp
+                // TODO: KeyDown
+                // self.win.addstr(&format!("<{:?}>", _input));
+            },
+        }
+
+        win.refresh();
+
+        (false, None)
     }
 }
 
@@ -137,10 +217,10 @@ impl Window {
 
         self.win.mv(self.max_y -1, 0);
         self.win.addstr(&self.cur_buf().prompt);
-        for x in self.input() {
+        for x in &self.cur_buf().input {
             self.win.addch(*x);
         }
-        self.win.mv(self.max_y -1, self.cursor_pos());
+        self.win.mv(self.max_y -1, self.cur_buf().cursor_pos());
     }
 
     pub fn resize(&mut self) {
@@ -150,24 +230,12 @@ impl Window {
         self.redraw();
     }
 
-    fn cursor_pos(&self) -> i32 {
-        (self.cur_buf().position + self.cur_buf().prompt.len()) as i32
-    }
-
     pub fn cur_buf(&self) -> &Buffer {
         self.buffers.get(self.cur_buf).unwrap()
     }
 
     pub fn cur_buf_mut(&mut self) -> &mut Buffer {
         self.buffers.get_mut(self.cur_buf).unwrap()
-    }
-
-    pub fn input(&self) -> &Vec<char> {
-        &self.cur_buf().input
-    }
-
-    pub fn input_mut(&mut self) -> &mut Vec<char> {
-        &mut self.cur_buf_mut().input
     }
 
     pub fn try_navigate(&mut self, window: String) {
@@ -218,26 +286,6 @@ impl Window {
                     _ => (),
                 }
             },
-            // Enter
-            Some(Input::Character('\n')) => {
-                if self.input().is_empty() {
-                    return None;
-                }
-
-                let line = self.input_mut().drain(..).collect();
-                self.cur_buf_mut().position = 0;
-                return Some(line);
-            },
-            // Backspace
-            Some(Input::Character('\x7f')) | Some(Input::Character('\x08')) => {
-                if self.cur_buf().position > 0 {
-                    self.win.mv(self.max_y -1, self.cursor_pos()-1);
-                    self.win.delch();
-                    self.cur_buf_mut().position -= 1;
-                    let position = self.cur_buf().position;
-                    self.input_mut().remove(position);
-                }
-            },
             // ^K
             Some(Input::Character('\x0b')) => {
                 self.catch_key = true;
@@ -249,51 +297,17 @@ impl Window {
             Some(Input::Character('\x0c')) => {
                 self.redraw();
             },
-            // ^A
-            Some(Input::Character('\x01')) => {
-                self.cur_buf_mut().position = 0;
-                self.redraw();
-            },
-            // ^E
-            Some(Input::Character('\x05')) => {
-                self.cur_buf_mut().position = self.input().len();
-                self.redraw();
-            },
-            // ^U
-            Some(Input::Character('\x15')) => {
-                let position = self.cur_buf().position;
-                self.input_mut().drain(..position).for_each(drop);
-                self.cur_buf_mut().position = 0;
-                self.redraw();
-            },
-            // Delete
-            Some(Input::KeyDC) => {
-                if self.cur_buf().position < self.input().len() {
-                    self.win.delch();
-                    let position = self.cur_buf().position;
-                    self.input_mut().remove(position);
-                }
-            },
-            Some(Input::Character(c)) => {
-                self.win.addch(c);
-                self.cur_buf_mut().position += 1;
-                self.input_mut().push(c);
-            },
-            Some(Input::KeyLeft) => {
-                self.cur_buf_mut().position = max(0, self.cur_buf().position -1);
-                self.win.mv(self.max_y -1, self.cursor_pos());
-            },
-            Some(Input::KeyRight) => {
-                self.cur_buf_mut().position = min(self.input().len(), self.cur_buf().position +1);
-                self.win.mv(self.max_y -1, self.cursor_pos());
-            },
             Some(Input::KeyResize) => self.resize(),
-            Some(_input) => {
-                // TODO: KeyPPage
-                // TODO: KeyNPage
-                // TODO: KeyUp
-                // TODO: KeyDown
-                // self.win.addstr(&format!("<{:?}>", _input));
+            Some(input) => {
+                let (redraw, result) = {
+                    let buffers = &mut self.buffers;
+                    let win = &mut self.win;
+                    buffers.get_mut(self.cur_buf).unwrap().get(win, input, self.max_y)
+                };
+                if redraw {
+                    self.redraw();
+                }
+                return result;
             },
             None => (),
         }
