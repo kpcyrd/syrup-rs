@@ -1,6 +1,6 @@
 [package]
 name = "syrup"
-version = "0.1.0"
+version = "0.2.0"
 description = "Simple abstraction around pancurses for chat-like interfaces"
 authors = ["kpcyrd <git@rxv.cc>"]
 license = "MIT/Apache-2.0"
